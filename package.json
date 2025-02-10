@@ -10,7 +10,9 @@
       "express": "^4.17.1",
       "mongoose": "^5.10.9",
       "axios": "^0.21.1",
-         "multer": "^1.4.4" 
+         "multer": "^1.4.4",
+         "@google/generative-ai": "^1.0.0"
+        
     },
     "engines": {
       "node": "14.x"
