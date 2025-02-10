@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Zomato Restaurants</title>
+    <style>
+      /* Basic Styling */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #dc7c64;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        background-color: #333;
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif
+        
+      }
+      
+      .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .logo {
+        width: 40px; /* Adjust the size of the logo */
+        height: 40px;
+        margin-right: 10px; /* Adds space between logo and title */
+      }
+      .container {
+        display: flex;
+        padding: 20px;
+      }
+      .filters {
+        width: 200px;
+        background-color: #fff;
+        padding: 15px;
+        margin-right: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .restaurants-container {
+        flex: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      .restaurant-card {
+        width: 190px;
+        background-color: white;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 10px;
+        text-align: center;
+        transition: transform 0.3s ease, box-shadow 0.3s ease; /* Add transition for smooth effect */
+      }
+      
+      .restaurant-card:hover {
+        transform: translateY(-10px); /* Moves the card up by 10px */
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Enhances the shadow effect on hover */
+      }
+      
+      .restaurant-card img {
+        width: 100%;
+        height: 150px; 
+        object-fit: cover;
+        border-radius: 8px;
+      }
+      .restaurant-card h3 {
+        font-size: 18px;
+        color: #333;
+      }
+      .restaurant-card p {
+        font-size: 14px;
+        color: #666;
+      }
+      .restaurant-card a {
+        color: #3498db;
+        text-decoration: none;
+      }
+      .restaurant-card a:hover {
+        text-decoration: underline;
+      }
+      /* Pagination Styles */
+      .pagination {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+      }
+      .pagination a,
+      .pagination button {
+        margin: 0 5px;
+        padding: 8px 15px;
+        font-size: 16px;
+        background-color: #3498db;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+      }
+      .pagination a.disabled,
+      .pagination button.disabled {
+        background-color: #bbb;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+    
+      <h1>Somato Restaurants</h1>
+    </header>
+
+    <div class="container">
+      <!-- Left pane for filters (we'll implement later) -->
+      <div class="filters">
+        <h3>Filters</h3>
+        <button id="upload-btn">Upload Food Image</button>
+        <input type="file" id="image-input" accept="image/*" style="display: none" />
+        <div id="cuisine-results">
+          <h4>Detected Cuisines:</h4>
+          <div id="cuisine-tags"></div>
+          <button id="clear-filters" style="margin-top: 10px; width: 100%;">Clear Filters</button>
+        </div>
+        <div class="loading">
+         
+        </div>
+      </div>
+
+      <!-- Right pane for displaying restaurants -->
+      <div class="restaurants-container" id="restaurants-container"></div>
+    </div>
+
+    <!-- Pagination controls -->
+    <div class="pagination" id="pagination"></div>
+
+    <script>
+      let currentPage = 1;
+      const limit = 15;
+      let totalPages = 1;
+      let userLat = null;
+      let userLon = null;
+      let detectedCuisines = null;
+
+      // Handle image upload
+      document.getElementById('upload-btn').addEventListener('click', () => {
+        document.getElementById('image-input').click();
+      });
+
+      document.getElementById('image-input').addEventListener('change', async (e) => {
+        if (e.target.files && e.target.files[0]) {
+          const formData = new FormData();
+          formData.append('image', e.target.files[0]);
+
+          // Show loading state
+          document.querySelector('.loading').style.display = 'block';
+          
+          try {
+            const response = await fetch('/upload-image', {
+              method: 'POST',
+              body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (data.cuisines) {
+              detectedCuisines = data.cuisines;
+              displayDetectedCuisines(detectedCuisines);
+              loadRestaurants(1); // Reload restaurants with cuisine filter
+            }
+          } catch (error) {
+            console.error('Error uploading image:', error);
+            alert('Error analyzing image. Please try again.');
+          } finally {
+            document.querySelector('.loading').style.display = 'none';
+          }
+        }
+      });
+
+      document.getElementById('clear-filters').addEventListener('click', () => {
+        detectedCuisines = null;
+        document.getElementById('cuisine-results').style.display = 'none';
+        document.getElementById('cuisine-tags').innerHTML = '';
+        loadRestaurants(1);
+      });
+
+      function displayDetectedCuisines(cuisines) {
+        const cuisineResults = document.getElementById('cuisine-results');
+        const cuisineTags = document.getElementById('cuisine-tags');
+        
+        cuisineTags.innerHTML = '';
+        cuisines.forEach(cuisine => {
+          const tag = document.createElement('span');
+          tag.className = 'cuisine-tag';
+          tag.textContent = cuisine;
+          cuisineTags.appendChild(tag);
+        });
+        
+        cuisineResults.style.display = 'block';
+      }
+
+      function loadRestaurants(page) {
+        currentPage = page;
+        
+        // Construct URL with all parameters
+        let url = `/restaurants?page=${page}&limit=${limit}`;
+        if (userLat !== null && userLon !== null) {
+          url += `&lat=${userLat}&lon=${userLon}`;
+        }
+        if (detectedCuisines) {
+          url += `&cuisines=${encodeURIComponent(detectedCuisines.join(','))}`;
+        }
+
+        fetch(url)
+          .then((response) => response.json())
+          .then((data) => {
+            const restaurantsContainer = document.getElementById("restaurants-container");
+            const paginationContainer = document.getElementById("pagination");
+            totalPages = data.totalPages;
+
+            restaurantsContainer.innerHTML = "";
+
+            if (data.restaurants.length === 0) {
+              restaurantsContainer.innerHTML = `
+                <div style="text-align: center; width: 100%; padding: 20px;">
+                  <p>No restaurants found matching the selected criteria.</p>
+                </div>
+              `;
+              return;
+            }
+
+            data.restaurants.forEach((restaurant) => {
+              const card = document.createElement("div");
+              card.className = "restaurant-card";
+              card.innerHTML = `
+                <img src="${restaurant.featured_image || 'default-restaurant-image.jpg'}" alt="${restaurant.name}">
+                <h3>${restaurant.name}</h3>
+                <p>${restaurant.location.locality}, ${restaurant.location.city}</p>
+                <p class="cuisines">${restaurant.cuisines}</p>
+                <a href="/restaurant/${restaurant._id}">View Details</a>
+              `;
+              restaurantsContainer.appendChild(card);
+            });
+
+            updatePagination(paginationContainer, data.totalPages);
+          })
+          .catch((error) => {
+            console.error("Error loading restaurants:", error);
+            const restaurantsContainer = document.getElementById("restaurants-container");
+            restaurantsContainer.innerHTML = `
+              <div class="error-message">
+                <p>Sorry, we couldn't load the restaurants. Please try again later.</p>
+              </div>
+            `;
+          });
+      }
+
+      function updatePagination(container, totalPages) {
+        container.innerHTML = "";
+
+        // First page button
+        const firstButton = document.createElement("a");
+        firstButton.href = "#";
+        firstButton.textContent = "First";
+        firstButton.className = currentPage <= 1 ? "disabled" : "";
+        firstButton.onclick = (e) => {
+          e.preventDefault();
+          if (currentPage > 1) loadRestaurants(1);
+        };
+        container.appendChild(firstButton);
+
+        // Previous button
+        const prevButton = document.createElement("a");
+        prevButton.href = "#";
+        prevButton.textContent = "Prev";
+        prevButton.className = currentPage <= 1 ? "disabled" : "";
+        prevButton.onclick = (e) => {
+          e.preventDefault();
+          if (currentPage > 1) loadRestaurants(currentPage - 1);
+        };
+        container.appendChild(prevButton);
+
+        // Next button
+        const nextButton = document.createElement("a");
+        nextButton.href = "#";
+        nextButton.textContent = "Next";
+        nextButton.className = currentPage >= totalPages ? "disabled" : "";
+        nextButton.onclick = (e) => {
+          e.preventDefault();
+          if (currentPage < totalPages) loadRestaurants(currentPage + 1);
+        };
+        container.appendChild(nextButton);
+
+        // Last page button
+        const lastButton = document.createElement("a");
+        lastButton.href = "#";
+        lastButton.textContent = "Last";
+        lastButton.className = currentPage >= totalPages ? "disabled" : "";
+        lastButton.onclick = (e) => {
+          e.preventDefault();
+          if (currentPage < totalPages) loadRestaurants(totalPages);
+        };
+        container.appendChild(lastButton);
+      }
+
+      // Try to get user's location, but load restaurants anyway
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            userLat = position.coords.latitude;
+            userLon = position.coords.longitude;
+            loadRestaurants(currentPage);
+          },
+          (error) => {
+            console.log("Location access denied or error, showing all restaurants");
+            loadRestaurants(currentPage);
+          }
+        );
+      } else {
+        console.log("Geolocation not supported, showing all restaurants");
+        loadRestaurants(currentPage);
+      }
+    </script>
+  </body>
+</html>

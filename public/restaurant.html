@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Restaurant Details</title>
+    <style>
+      body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #f8f9fa;
+        text-align: left;
+        margin: 0;
+        padding: 0;
+      }
+      .container {
+        max-width: 700px;
+        margin: 20px auto;
+        background: white;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      }
+      .restaurant-image {
+        width: 100%;
+        border-radius: 8px;
+        margin-bottom: 15px;
+      }
+      h1 {
+        color: #333;
+        font-size: 24px;
+      }
+      .details p {
+        font-size: 16px;
+        color: #555;
+        margin: 8px 0;
+      }
+      .rating {
+        font-size: 20px;
+        font-weight: bold;
+        padding: 10px;
+        border-radius: 5px;
+        display: inline-block;
+        color: white;
+      }
+      .btn {
+        display: inline-block;
+        padding: 10px 15px;
+        margin-top: 15px;
+        background: #e74c3c;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        font-weight: bold;
+      }
+      .btn:hover {
+        background: #c0392b;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="restaurant-name" >Loading...</h1>
+      <img id="restaurant-image" class="restaurant-image" src="" alt="Restaurant Image" />
+      <div class="details">
+        <p><strong>Location:</strong> <span id="restaurant-location"></span></p>
+        <p><strong>Address:</strong> <span id="restaurant-address"></span></p>
+        <p><strong>Zipcode:</strong> <span id="restaurant-zipcode"></span></p>
+        <p><strong>Latitude:</strong> <span id="restaurant-lat"></span>, <strong>Longitude:</strong> <span id="restaurant-lng"></span></p>
+        <p><strong>Cuisines:</strong> <span id="restaurant-cuisines"></span></p>
+        <p><strong>Average Cost for Two:</strong> ₹<span id="restaurant-cost"></span></p>
+        <p><strong>Price Range:</strong> <span id="restaurant-price"></span></p>
+        <p class="rating" id="restaurant-rating"></p>
+        <p><strong>Votes:</strong> <span id="restaurant-votes"></span></p>
+        <p><strong>Delivery:</strong> <span id="restaurant-delivery"></span></p>
+        <p><strong>Table Booking:</strong> <span id="restaurant-table"></span></p>
+        <p><strong>Currently Delivering:</strong> <span id="restaurant-delivering"></span></p>
+        <a id="menu-link" class="btn" href="#" target="_blank">View Menu</a>
+        <a id="events-link" class="btn" href="#" target="_blank">View Events</a>
+        <a href="/" class="btn">Back to Home</a>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async function () {
+        const restaurantId = window.location.pathname.split("/").pop();
+
+        try {
+          const response = await fetch(`/api/restaurant/${restaurantId}`);
+          const restaurant = await response.json();
+
+          document.getElementById("restaurant-name").textContent = restaurant.name;
+          document.getElementById("restaurant-image").src = restaurant.featured_image || 'default.jpg';
+          document.getElementById("restaurant-location").textContent = `${restaurant.location.locality}, ${restaurant.location.city}`;
+          document.getElementById("restaurant-address").textContent = restaurant.location.address;
+          document.getElementById("restaurant-zipcode").textContent = restaurant.location.zipcode;
+          document.getElementById("restaurant-lat").textContent = restaurant.location.latitude;
+          document.getElementById("restaurant-lng").textContent = restaurant.location.longitude;
+          document.getElementById("restaurant-cuisines").textContent = restaurant.cuisines;
+          document.getElementById("restaurant-cost").textContent = restaurant.average_cost_for_two;
+          document.getElementById("restaurant-price").textContent = '★'.repeat(restaurant.price_range);
+          document.getElementById("restaurant-rating").textContent = `⭐ ${restaurant.user_rating.aggregate_rating} - ${restaurant.user_rating.rating_text}`;
+          document.getElementById("restaurant-rating").style.backgroundColor = `#${restaurant.user_rating.rating_color}`;
+          document.getElementById("restaurant-votes").textContent = restaurant.user_rating.votes;
+          document.getElementById("restaurant-delivery").textContent = restaurant.has_online_delivery ? "Yes" : "No";
+          document.getElementById("restaurant-table").textContent = restaurant.has_table_booking ? "Yes" : "No";
+          document.getElementById("restaurant-delivering").textContent = restaurant.is_delivering_now ? "Yes" : "No";
+          document.getElementById("menu-link").href = restaurant.menu_url || "#";
+          document.getElementById("events-link").href = restaurant.events_url || "#";
+        } catch (error) {
+          document.getElementById("restaurant-name").textContent = "Error loading details.";
+        }
+      });
+    </script>
+  </body>
+</html>
