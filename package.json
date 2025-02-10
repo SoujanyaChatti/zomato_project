@@ -7,12 +7,11 @@
       "start": "node index.js"
     },
     "dependencies": {
+      "@google/generative-ai": "^0.21.0",
       "express": "^4.17.1",
       "mongoose": "^5.10.9",
       "axios": "^0.21.1",
-         "multer": "^1.4.4",
-        "@google-ai/generativelanguage": "^2.1.1"
-        
+      "multer": "^1.4.4" 
     },
     "engines": {
       "node": "14.x"
